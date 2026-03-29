@@ -52,6 +52,21 @@ class StartTransactionOcppMessage extends OcppOutgoing<
                     measurand: "Energy.Active.Import.Register",
                     unit: "kWh",
                   },
+                  {
+                    value: "220.0",
+                    measurand: "Voltage",
+                    unit: "V",
+                  },
+                  {
+                    value: "16.0",
+                    measurand: "Current.Import",
+                    unit: "A",
+                  },
+                  {
+                    value: "3520.0",
+                    measurand: "Power.Active.Import",
+                    unit: "W",
+                  },
                 ],
               },
             ],
