@@ -1,0 +1,6 @@
+#!/bin/bash
+
+curl -N \
+  -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxNWY0Y2M5OC1lZTFmLTRlNmEtYjA0YS0zMzVmNWNjMGRjZmYiLCJ0eXBlIjoiYWNjZXNzIiwiaWF0IjoxNzc1ODE3NzI0LCJleHAiOjE3NzU5MDQxMjR9.MEznsFzs2LB_lkpLGWu_FGwydQ9ZBu5y6dcVY2g66HUHgtnSGTqmD1IpWWYJAs8Wy3Tnpf1YO7JQBPCYtoh6B95UHvdcV_xqBqE-cJ2GOxy7YLbWbHhEyF7HhHeKRE1LOq2f6YmkfwAdouJ5dNUH_NEG5Vjl3EG02d_eGct25T3Kno8iyw2qrM7AZA88wWLReMLgxnUiSt5-RS_8J_8pdIzMSxAk-xj6142_-rjztNTbjcI4nwpCG-jl9kte6vak_vQLBbrXWrn0VfcNTZiwB-ZJG7QX8TdmnFSBypQgosZ1ehzACsOw0dyBmp2FDth-UwBcdFRNUPXO2HSHMgN8dQ" \
+  -H "Accept: text/event-stream" \
+  "https://api.pandaev.cc/api/mobile/v1/charging-sessions/7a43a604-41f0-4896-94e9-60396335f65b/stream"
