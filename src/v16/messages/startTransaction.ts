@@ -39,6 +39,9 @@ class StartTransactionOcppMessage extends OcppOutgoing<
       idTag: call.payload.idTag,
       connectorId: call.payload.connectorId,
       meterValuesCallback: async (transactionState) => {
+        const elapsedMinutes =
+          (Date.now() - transactionState.startedAt.getTime()) / 60000;
+        const soc = Math.min(100, Math.round(20 + elapsedMinutes * 0.5));
         vcp.send(
           meterValuesOcppMessage.request({
             connectorId: call.payload.connectorId,
@@ -66,6 +69,12 @@ class StartTransactionOcppMessage extends OcppOutgoing<
                     value: "3520.0",
                     measurand: "Power.Active.Import",
                     unit: "W",
+                  },
+                  {
+                    value: soc.toString(),
+                    measurand: "SoC",
+                    unit: "Percent",
+                    location: "EV",
                   },
                 ],
               },
