@@ -41,7 +41,7 @@ class StartTransactionOcppMessage extends OcppOutgoing<
       meterValuesCallback: async (transactionState) => {
         const elapsedMinutes =
           (Date.now() - transactionState.startedAt.getTime()) / 60000;
-        const soc = Math.min(100, Math.round(20 + elapsedMinutes * 0.5));
+        const soc = Math.min(95, Math.round(90 + elapsedMinutes * 0.5));
         vcp.send(
           meterValuesOcppMessage.request({
             connectorId: call.payload.connectorId,
