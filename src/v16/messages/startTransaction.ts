@@ -41,7 +41,8 @@ class StartTransactionOcppMessage extends OcppOutgoing<
       meterValuesCallback: async (transactionState) => {
         const elapsedMinutes =
           (Date.now() - transactionState.startedAt.getTime()) / 60000;
-        const soc = Math.min(95, Math.round(90 + elapsedMinutes * 0.5));
+        // SoC rises from 90 → 100 over ~20 minutes and is allowed to reach 100
+        const soc = Math.min(95, Math.round(80 + elapsedMinutes * 0.5));
         vcp.send(
           meterValuesOcppMessage.request({
             connectorId: call.payload.connectorId,
@@ -81,6 +82,26 @@ class StartTransactionOcppMessage extends OcppOutgoing<
             ],
           }),
         );
+
+        // When battery is full, send StopTransaction (EV stops accepting charge)
+        if (soc >= 95) {
+          vcp.transactionManager.stopTransaction(result.payload.transactionId);
+          vcp.send(
+            stopTransactionOcppMessage.request({
+              transactionId: result.payload.transactionId,
+              meterStop: Math.round(transactionState.meterValue),
+              reason: "EVDisconnected",
+              timestamp: new Date().toISOString(),
+            }),
+          );
+          vcp.send(
+            statusNotificationOcppMessage.request({
+              connectorId: call.payload.connectorId,
+              errorCode: "NoError",
+              status: "Available",
+            }),
+          );
+        }
       },
     });
     if (result.payload.idTagInfo.status !== "Accepted") {

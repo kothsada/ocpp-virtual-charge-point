@@ -10,7 +10,7 @@ const HeartbeatReqSchema = z.object({});
 type HeartbeatReqType = typeof HeartbeatReqSchema;
 
 const HeartbeatResSchema = z.object({
-  currentTime: z.string().datetime(),
+  currentTime: z.string().datetime({ offset: true }),
 });
 type HeartbeatResType = typeof HeartbeatResSchema;
 
