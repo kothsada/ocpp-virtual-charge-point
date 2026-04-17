@@ -41,8 +41,10 @@ class StartTransactionOcppMessage extends OcppOutgoing<
       meterValuesCallback: async (transactionState) => {
         const elapsedMinutes =
           (Date.now() - transactionState.startedAt.getTime()) / 60000;
-        // SoC rises from 90 → 100 over ~20 minutes and is allowed to reach 100
-        const soc = Math.min(95, Math.round(80 + elapsedMinutes * 0.5));
+        // SoC rises from 80 → 100 % over ~40 minutes (0.5 %/min).
+        // Capped at 100 so OCPP's SoC-based auto-stop path (threshold ≥ 100%)
+        // is exercised correctly in simulator tests.
+        const soc = Math.min(100, Math.round(80 + elapsedMinutes * 0.5));
         vcp.send(
           meterValuesOcppMessage.request({
             connectorId: call.payload.connectorId,
@@ -83,8 +85,11 @@ class StartTransactionOcppMessage extends OcppOutgoing<
           }),
         );
 
-        // When battery is full, send StopTransaction (EV stops accepting charge)
-        if (soc >= 95) {
+        // When battery is full (SoC 100 %), send StopTransaction so OCPP can
+        // finalise the session and publish transaction.stopped for billing.
+        // stopTransaction() clears the meter-values interval first to prevent
+        // a duplicate StopTransaction on the next tick.
+        if (soc >= 100) {
           vcp.transactionManager.stopTransaction(result.payload.transactionId);
           vcp.send(
             stopTransactionOcppMessage.request({
