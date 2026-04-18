@@ -41,10 +41,13 @@ class StartTransactionOcppMessage extends OcppOutgoing<
       meterValuesCallback: async (transactionState) => {
         const elapsedMinutes =
           (Date.now() - transactionState.startedAt.getTime()) / 60000;
-        // SoC rises from 80 → 100 % over ~40 minutes (0.5 %/min).
-        // Capped at 100 so OCPP's SoC-based auto-stop path (threshold ≥ 100%)
-        // is exercised correctly in simulator tests.
-        const soc = Math.min(100, Math.round(80 + elapsedMinutes * 0.5));
+        // SoC rises from 80 % at 0.5 %/min, capped at vcp.targetSoc.
+        // Default targetSoc=100; set via env TARGET_SOC or admin POST /config.
+        // Examples: targetSoc=90 → stops at 90 % (~20 min); targetSoc=80 → stops immediately.
+        const soc = Math.min(
+          vcp.targetSoc,
+          Math.round(80 + elapsedMinutes * 0.5),
+        );
         vcp.send(
           meterValuesOcppMessage.request({
             connectorId: call.payload.connectorId,
@@ -89,7 +92,12 @@ class StartTransactionOcppMessage extends OcppOutgoing<
         // finalise the session and publish transaction.stopped for billing.
         // stopTransaction() clears the meter-values interval first to prevent
         // a duplicate StopTransaction on the next tick.
-        if (soc >= 100) {
+        //
+        // Sequence after battery full:
+        //  1. StopTransaction  — billing finalised by server
+        //  2. SuspendedEV      — cable still connected; server starts parking timer
+        //  3. Available (30 s) — simulates user unplugging; server charges parking fee
+        if (soc >= vcp.targetSoc) {
           vcp.transactionManager.stopTransaction(result.payload.transactionId);
           vcp.send(
             stopTransactionOcppMessage.request({
@@ -99,13 +107,24 @@ class StartTransactionOcppMessage extends OcppOutgoing<
               timestamp: new Date().toISOString(),
             }),
           );
+          // SuspendedEV — cable is still plugged in after battery full
           vcp.send(
             statusNotificationOcppMessage.request({
               connectorId: call.payload.connectorId,
               errorCode: "NoError",
-              status: "Available",
+              status: "SuspendedEV",
             }),
           );
+          // Simulate car unplug after 30 seconds so parking fee window is testable
+          setTimeout(() => {
+            vcp.send(
+              statusNotificationOcppMessage.request({
+                connectorId: call.payload.connectorId,
+                errorCode: "NoError",
+                status: "Available",
+              }),
+            );
+          }, 30_000);
         }
       },
     });

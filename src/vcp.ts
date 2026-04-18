@@ -47,11 +47,26 @@ export class VCP {
 
   transactionManager = new TransactionManager();
 
+  /**
+   * Target State-of-Charge (%) at which the VCP stops charging and sends
+   * StopTransaction.  Range: 1–100.
+   *
+   * Set via:
+   *   1. Environment variable TARGET_SOC (applied at startup)
+   *   2. Admin API  POST http://localhost:<adminPort>/config  { "targetSoc": 90 }
+   */
+  targetSoc: number = Math.min(
+    100,
+    Math.max(1, Number.parseInt(process.env.TARGET_SOC ?? "100", 10) || 100),
+  );
+
   constructor(private vcpOptions: VCPOptions) {
     this.messageHandler = resolveMessageHandler(vcpOptions.ocppVersion);
     if (vcpOptions.adminPort) {
       const adminApi = new Hono();
       adminApi.get("/health", (c) => c.text("OK"));
+
+      // Forward an OCPP message to the Central System
       adminApi.post(
         "/execute",
         zValidator(
@@ -67,6 +82,32 @@ export class VCP {
           return c.text("OK");
         },
       );
+
+      // Change VCP runtime config without restarting
+      // Example: POST /config  { "targetSoc": 85 }
+      adminApi.post(
+        "/config",
+        zValidator(
+          "json",
+          z.object({
+            targetSoc: z.number().int().min(1).max(100).optional(),
+          }),
+        ),
+        (c) => {
+          const body = c.req.valid("json");
+          if (body.targetSoc !== undefined) {
+            this.targetSoc = body.targetSoc;
+            logger.info(`VCP config updated: targetSoc=${this.targetSoc}%`);
+          }
+          return c.json({ targetSoc: this.targetSoc });
+        },
+      );
+
+      // Read current VCP config
+      adminApi.get("/config", (c) => {
+        return c.json({ targetSoc: this.targetSoc });
+      });
+
       serve({
         fetch: adminApi.fetch,
         port: vcpOptions.adminPort,

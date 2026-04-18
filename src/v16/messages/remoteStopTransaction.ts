@@ -39,6 +39,9 @@ class RemoteStopTransactionOcppMessage extends OcppIncoming<
       idTag: transaction.idTag,
     });
 
+    // Stop the meter-values interval so no further MeterValues fire after stop
+    vcp.transactionManager.stopTransaction(transactionId);
+
     vcp.send(
       stopTransactionOcppMessage.request({
         transactionId: transactionId,
@@ -64,13 +67,27 @@ class RemoteStopTransactionOcppMessage extends OcppIncoming<
         ],
       }),
     );
+
+    // SuspendedEV — cable still connected after remote stop.
+    // Allows the server to start the parking timer and push an idle warning to
+    // the App. Available is sent after 30 s to simulate the user unplugging,
+    // which triggers the actual parking fee deduction on the server side.
     vcp.send(
       statusNotificationOcppMessage.request({
         connectorId: transaction.connectorId,
         errorCode: "NoError",
-        status: "Available",
+        status: "SuspendedEV",
       }),
     );
+    setTimeout(() => {
+      vcp.send(
+        statusNotificationOcppMessage.request({
+          connectorId: transaction.connectorId,
+          errorCode: "NoError",
+          status: "Available",
+        }),
+      );
+    }, 30_000);
   };
 }
 
