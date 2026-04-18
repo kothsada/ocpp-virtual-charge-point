@@ -31,11 +31,17 @@ class RemoteStopTransactionOcppMessage extends OcppIncoming<
     }
     vcp.respond(this.response(call, { status: "Accepted" }));
 
+    // Capture meter value BEFORE stopTransaction() — it deletes the transaction
+    // from the map, causing getMeterValue() to return 0 afterwards.
+    const meterStop = Math.floor(
+      vcp.transactionManager.getMeterValue(transactionId),
+    );
+
     const ocmf = generateOCMF({
       startTime: transaction.startedAt,
       startEnergy: 0,
       endTime: new Date(),
-      endEnergy: vcp.transactionManager.getMeterValue(transactionId) / 1000,
+      endEnergy: meterStop / 1000,
       idTag: transaction.idTag,
     });
 
@@ -45,9 +51,7 @@ class RemoteStopTransactionOcppMessage extends OcppIncoming<
     vcp.send(
       stopTransactionOcppMessage.request({
         transactionId: transactionId,
-        meterStop: Math.floor(
-          vcp.transactionManager.getMeterValue(transactionId),
-        ),
+        meterStop,
         timestamp: new Date().toISOString(),
         transactionData: [
           {

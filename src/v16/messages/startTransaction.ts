@@ -72,7 +72,7 @@ class StartTransactionOcppMessage extends OcppOutgoing<
                     unit: "A",
                   },
                   {
-                    value: "3520.0",
+                    value: "6500.0",
                     measurand: "Power.Active.Import",
                     unit: "W",
                   },
